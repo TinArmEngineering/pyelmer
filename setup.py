@@ -22,11 +22,8 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "gmsh",
         "pyyaml",
-        "matplotlib",
         "numpy",
-        "objectgmsh",
         "pandas",
     ],
     python_requires=">=3.7",
