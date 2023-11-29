@@ -3,24 +3,30 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class LinearIteration:
-    idx: list
-    relc: list
+    """Template class for evaluation of residuals - does not work very well."""
+
+    idx: list = field(default_factory=list)
+    relc: list = field(default_factory=list)
 
 
 @dataclass
 class NonlinearIteration:
+    """Template class for evaluation of residuals - does not work very well."""
+
     nrm: float = 0
     relc: float = 0
-    linear_iteration: LinearIteration = LinearIteration([], [])
+    linear_iteration: LinearIteration = field(default_factory=LinearIteration)
 
 
 @dataclass
 class SteadyStateIteration:
+    """Template class for evaluation of residuals - does not work very well."""
+
     nonlinear_iterations: list
     nrm: float = 0
     relc: float = 0
@@ -40,6 +46,8 @@ class SteadyStateIteration:
 
 @dataclass
 class SolverResiduals:
+    """Template class for evaluation of residuals - does not work very well."""
+
     steady_state_iterations: list
 
     def ss_relc(self):
@@ -64,7 +72,7 @@ def scan_logfile(sim_dir):
     Returns:
         list[str], list[str], dict: error messages, warnings, statistics
     """
-    with open(sim_dir + "/elmersolver.log", "r") as f:
+    with open(os.path.join(sim_dir, "elmersolver.log"), "r") as f:
         log = f.readlines()
     for i in range(len(log)):
         log[i] = log[i][:-1]
@@ -92,7 +100,7 @@ def plot_residuals(sim_dir, solvers, save=False):
         solvers (list): solvers to analyze - currently works only for
         'heat equation' and 'statmagsolver'
     """
-    with open(sim_dir + "/elmersolver.log", "r") as f:
+    with open(os.path.join(sim_dir, "elmersolver.log"), "r") as f:
         log = f.readlines()
     for i in range(len(log)):
         log[i] = log[i][:-1]
@@ -243,7 +251,10 @@ def dat_to_dataframe(dat_file):
     names_start = False
     for line in lines:
         if names_start == True:
-            names.append(line.split(":")[-1].strip())
-        if "Data on different columns" in line:
+            names.append(":".join(line.split(":")[1:]).strip())
+        if (
+            "Data on different columns" in line
+            or "Variables in columns of matrix" in line
+        ):
             names_start = True
     return pd.read_table(dat_file, names=names, delim_whitespace=True)

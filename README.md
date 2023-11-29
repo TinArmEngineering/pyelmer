@@ -2,6 +2,7 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![DOI](https://zenodo.org/badge/294339020.svg)](https://zenodo.org/badge/latestdoi/294339020)
+[![Documentation Status](https://readthedocs.org/projects/pyelmer/badge/?version=stable)](https://pyelmer.readthedocs.io/en/stable/?badge=stable)
 
 ## Project description
 
@@ -38,6 +39,7 @@ The basic working principle of pyelmer is the representation of sif-file entries
 - *Material*
 - *Body*
 - *Boundary*
+- *Component*
 - *BodyForce*
 - *InitialCondition*
 
@@ -216,7 +218,7 @@ import pyelmer.elmerkw as elmer
 
 ## Documentation
 
-A simple documentation in form of doc-strings can be found in the source code. A more extensive documentation will hopefully follow soon.
+To get an overview of the program have a look at [pyelmer's Read the Docs page](https://pyelmer.readthedocs.io/en/stable/). In case of questions please open an issue!
 
 ## License
 
@@ -228,7 +230,7 @@ If you use pyelmer in your research, we would be grateful if you cite us using t
 
 ## Acknowledgements
 
-[This project](https://www.researchgate.net/project/NEMOCRYS-Next-Generation-Multiphysical-Models-for-Crystal-Growth-Processes) has received funding from the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement No 851768).
+[This project](https://nemocrys.github.io/) has received funding from the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement No 851768).
 
 <img src="https://raw.githubusercontent.com/nemocrys/pyelmer/master/EU-ERC.png">
 

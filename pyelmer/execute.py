@@ -6,14 +6,20 @@ import multiprocessing
 import platform
 
 
-def run_elmer_grid(sim_dir, meshfile, elmergrid=None):
-    """Run ElmerGrid on gmsh meshfile and move everithing into main
+def run_elmer_grid(mesh_dir, meshfile, elmergrid=None, **kwargs):
+    """Run ElmerGrid on gmsh meshfile and move everything into main
     directory.
 
     Args:
-        sim_dir (str): Simulation directory
+        mesh_dir (str): Directory of mesh file
         meshfile (str): Filename of .msh file
-        elmergrid (str): ElmerGrid executable
+        elmergrid (str, optional): ElmerGrid executable
+        **kwargs: Arbitrary keyword arguments
+
+    Keyword Args:
+        out_dir (str): Optional directory to save the output
+        keep_mesh_dir (bool): Whether to keep the mesh directory, don't
+            use out_dir.
     """
     if elmergrid is None:
         # On Windows ElmerGrid.exe is not found once gmsh.initialize() was executed.
@@ -24,16 +30,22 @@ def run_elmer_grid(sim_dir, meshfile, elmergrid=None):
             elmergrid = "ElmerGrid"
 
     args = [elmergrid, "14", "2", meshfile]
-    with open(sim_dir + "/elmergrid.log", "w") as f:
-        subprocess.run(args, cwd=sim_dir, stdout=f, stderr=f)
+    with open(os.path.join(mesh_dir, "elmergrid.log"), "w") as f:
+        subprocess.run(args, cwd=mesh_dir, stdout=f, stderr=f)
 
-    mesh_dir = sim_dir + "/" + ".".join(meshfile.split(".")[:-1])
-    files = os.listdir(mesh_dir)
-    for f in files:
-        if os.path.exists(sim_dir + "/" + f):
-            os.remove(sim_dir + "/" + f)
-        shutil.move(mesh_dir + "/" + f, sim_dir)
-    shutil.rmtree(mesh_dir)
+    keep_mesh_dir = kwargs.get("keep_mesh_dir", False)
+
+    if not keep_mesh_dir:
+        elmer_mesh_dir = os.path.join(mesh_dir, ".".join(meshfile.split(".")[:-1]))
+        out_dir = kwargs.get("out_dir", mesh_dir)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        files = os.listdir(elmer_mesh_dir)
+        for f in files:
+            if os.path.exists(os.path.join(out_dir, f)):
+                os.remove(os.path.join(out_dir, f))
+            shutil.move(os.path.join(elmer_mesh_dir, f), out_dir)
+        shutil.rmtree(elmer_mesh_dir)
 
 
 def run_elmerf90(userfile_in, userfile_out, elmerf90=None):
@@ -44,7 +56,7 @@ def run_elmerf90(userfile_in, userfile_out, elmerf90=None):
     Args:
         userfile_in (str) : Filename of .F90 file
         userfile_out (str) : Filename of .so file
-        elmerf90 (str): elmerf90 executable
+        elmerf90 (str, optional): elmerf90 executable
     """
     if elmerf90 is None:
         # On Windows ElmerSolver.exe is not found once gmsh.initialize() was executed.
@@ -61,7 +73,7 @@ def run_elmer_solver(sim_dir, elmersolver=None):
 
     Args:
         sim_dir (str): Simulation directory
-        elmersolver (str): ElmerSolver executable
+        elmersolver (str, optional): ElmerSolver executable
     """
     if elmersolver is None:
         # On Windows ElmerSolver.exe is not found once gmsh.initialize() was executed.
@@ -72,7 +84,7 @@ def run_elmer_solver(sim_dir, elmersolver=None):
             elmersolver = "ElmerSolver"
 
     args = [elmersolver, "case.sif"]
-    with open(sim_dir + "/elmersolver.log", "w") as f:
+    with open(os.path.join(sim_dir, "elmersolver.log"), "w") as f:
         subprocess.run(args, cwd=sim_dir, stdout=f, stderr=f)
 
 

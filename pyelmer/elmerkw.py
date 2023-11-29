@@ -33,28 +33,38 @@ class Boundary(elmer.Boundary):
             surf_ids (list of int): Ids of boundaries in mesh.
         """
         super().__init__(simulation, name, geo_ids)
-        self.radiation = False
-        self.radiation_idealized = False
-        self.fixed_temperature = None
-        self.fixed_heatflux = None
-        self.zero_potential = False
-        self.save_scalars = False
-        self.save_line = False
-        self.smart_heater = False
-        self.smart_heater_T = 0
-        self.phase_change_steady = False
-        self.phase_change_transient = False
-        self.phase_change_vel = 0
-        self.material = None
-        self.normal_target_body = None
-        self.phase_change_body = None
-        self.heat_transfer_coefficient = 0
-        self.T_ext = 0
-        self.mesh_update = []
+        self.radiation = False  #: surface to surface radiation, defaults to False
+        self.radiation_idealized = (
+            False  #: idealized radiation (to ambient), defaults to False
+        )
+        self.fixed_temperature = None  #: fixed temperature, defaults to None
+        self.fixed_heatflux = None  #: fixed heat flux, defaults to None
+        self.zero_potential = False  #: zero potential, defaults to False
+        self.save_scalars = False  #: add save scalars flag, defaults to False
+        self.save_line = False  #: add save line flag, defaults to False
+        self.smart_heater = False  #: add smart heater flag, defaults to False
+        self.smart_heater_T = 0  #: smart heater temperature, defaults to 0
+        self.phase_change_steady = (
+            False  #: set steady phase change parameters, defaults to False
+        )
+        self.phase_change_transient = (
+            False  #: set transient phase change parameters, defaults to False
+        )
+        self.phase_change_vel = 0  #: phase change velocity, defaults to 0
+        self.material = None  #: reference to material object, defaults to None
+        self.normal_target_body = (
+            None  #: reference to normal target body, defaults to None
+        )
+        self.phase_change_body = (
+            None  #: reference to phase change body, defaults to None
+        )
+        self.heat_transfer_coefficient = 0  #: heat transfer coefficient, defaults to 0
+        self.T_ext = 0  #: external temperature, defaults to 0
+        self.mesh_update = []  #: mesh update velocity, defaults to []
 
     def get_data(self):
         """Generate dictionary with data for sif-file."""
-        d = super().get_data()
+        d = {}
         if self.radiation:
             d.update({"Radiation": "Diffuse Gray"})
         if self.radiation_idealized:
@@ -122,6 +132,7 @@ class Boundary(elmer.Boundary):
             if len(self.mesh_update) == 3:
                 if self.mesh_update[2] is not None:
                     d.update({"Mesh Update 3": self.mesh_update[2]})
+        d.update(super().get_data())
         return d
 
 
@@ -138,16 +149,18 @@ class BodyForce(elmer.BodyForce):
             data (dict): Body force data as in sif-file.
         """
         super().__init__(simulation, name, data)
-        self.joule_heat = False
-        self.current_density = 0
-        self.heat_source = 0
-        self.integral_heat_source = 0
-        self.smart_heat_control = False
-        self.smart_heater_control_point = []
-        self.smart_heater_T = 0
+        self.joule_heat = False  #: joule heating activated, defaults to False
+        self.current_density = 0  #: fixed current density, defaults to 0
+        self.heat_source = 0  #: fixed heat source, defaults to 0
+        self.integral_heat_source = 0  #: fixed integral heat source, defaults to 0
+        self.smart_heat_control = False  #: smart heat control, defaults to False
+        self.smart_heater_control_point = (
+            []
+        )  #: control point for smart heater, defaults to []
+        self.smart_heater_T = 0  #: smart heater temperature, defaults to 0
 
     def get_data(self):
-        d = super().get_data()
+        d = {}
         if self.joule_heat:
             d.update({"Joule Heat": "Logical True"})
         if self.current_density != 0:
@@ -172,4 +185,5 @@ class BodyForce(elmer.BodyForce):
                     "Smart Heater Temperature": self.smart_heater_T,
                 }
             )
+        d.update(super().get_data())
         return d

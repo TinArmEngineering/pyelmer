@@ -7,6 +7,7 @@ Each of these objects contains the data required in the sif in form
 of a dictionary called data.
 """
 
+import os
 import yaml
 
 
@@ -21,15 +22,21 @@ class Simulation:
 
     def __init__(self):
         self.intro_text = ""
+        self.header = {
+            "CHECK KEYWORDS": '"Warn"',
+            "Mesh DB": '"." "."',
+        }
         self.materials = {}
         self.bodies = {}
         self.boundaries = {}
         self.body_forces = {}
+        self.components = {}
         self.initial_conditions = {}
         self.solvers = {}
         self.equations = {}
         self.constants = {"Stefan Boltzmann": 5.6704e-08}
         self.settings = {}
+        self.sif_filename = "case.sif"
 
     def write_sif(self, simulation_dir):
         """Write sif file.
@@ -38,11 +45,13 @@ class Simulation:
             simulation_dir (str): Path of simulation directory
         """
         self._set_ids()
-        with open(simulation_dir + "/case.sif", "w") as f:
+        with open(os.path.join(simulation_dir, self.sif_filename), "w") as f:
             if self.intro_text != "":
                 f.write(self.intro_text)
                 f.write("\n\n")
-            f.write("""Header\n  CHECK KEYWORDS "Warn"\n  Mesh DB "." "."\nEnd\n\n""")
+            f.write("Header\n")
+            f.write(self._dict_to_str(self.header, key_value_separator=" "))
+            f.write("End\n\n")
             f.write("Simulation\n")
             f.write(self._dict_to_str(self.settings))
             f.write("End\n\n")
@@ -85,6 +94,12 @@ class Simulation:
                 f.write(self._dict_to_str(body_force.get_data()))
                 f.write("End\n\n")
             f.write("\n")
+            for component_name, component in self.components.items():
+                f.write("! " + component_name + "\n")
+                f.write("Component " + str(component.id) + "\n")
+                f.write(self._dict_to_str(component.get_data()))
+                f.write("End\n\n")
+            f.write("\n")
             for (
                 initial_condition_name,
                 initial_condition,
@@ -101,8 +116,9 @@ class Simulation:
         Args:
             simulation_dir (str): simulation directory
         """
-        with open(simulation_dir + "/ELMERSOLVER_STARTINFO", "w") as f:
-            f.write("case.sif\n")
+        with open(os.path.join(simulation_dir, "ELMERSOLVER_STARTINFO"), "w") as f:
+            f.write(self.sif_filename)
+            f.write("\n")
 
     def write_boundary_ids(self, simulation_dir):
         """Write yaml-file containing the boundary names and the
@@ -112,13 +128,13 @@ class Simulation:
             simulation_dir (str): Path of simulation directory
         """
         data = {boundary.id: name for name, boundary in self.boundaries.items()}
-        with open(simulation_dir + "/boundaries.yml", "w") as f:
+        with open(os.path.join(simulation_dir, "boundaries.yml"), "w") as f:
             yaml.dump(data, f, sort_keys=False)
 
-    def _dict_to_str(self, dictionary):
+    def _dict_to_str(self, dictionary, *, key_value_separator=" = "):
         text = ""
         for key, value in dictionary.items():
-            text = "".join([text, "  ", key, " = ", str(value), "\n"])
+            text = "".join([text, "  ", key, key_value_separator, str(value), "\n"])
         return text
 
     def _set_ids(self):
@@ -129,6 +145,7 @@ class Simulation:
             self.bodies,
             self.boundaries,
             self.body_forces,
+            self.components,
             self.initial_conditions,
         ]
         # give each object id
@@ -141,6 +158,18 @@ class Simulation:
 
 class Body:
     """Wrapper for bodies in sif-file."""
+
+    def __new__(cls, simulation, name, body_ids=None, data=None):
+        """Intercept object construction to return an existing object if possible."""
+        if name in simulation.bodies:
+            existing = simulation.bodies[name]
+            new_body_ids = [] if body_ids is None else body_ids
+            new_data = {} if data is None else data
+            if [new_body_ids, new_data] != [existing.body_ids, existing.data]:
+                raise ValueError(f'Body name clash: "{name}".')
+            return existing
+        else:
+            return super().__new__(cls)
 
     def __init__(self, simulation, name, body_ids=None, data=None):
         """Create body object.
@@ -164,10 +193,12 @@ class Body:
         else:
             self.data = data
         # optional parameters
-        self.equation = None
-        self.initial_condition = None
-        self.material = None
-        self.body_force = None
+        self.equation = None  # : optional reference to an Equation object
+        self.initial_condition = (
+            None  # : optional reference to an InitialCondition object
+        )
+        self.material = None  # : optional reference to a Material object
+        self.body_force = None  # : optional reference to a BodyForce object
 
     def get_data(self):
         """Generate dictionary with data for sif-file."""
@@ -197,6 +228,18 @@ class Body:
 
 class Boundary:
     """Wrapper for boundaries in sif-file."""
+
+    def __new__(cls, simulation, name, geo_ids=None, data=None):
+        """Intercept object construction to return an existing object if possible."""
+        if name in simulation.boundaries:
+            existing = simulation.boundaries[name]
+            new_geo_ids = [] if geo_ids is None else geo_ids
+            new_data = {} if data is None else data
+            if [new_geo_ids, new_data] != [existing.geo_ids, existing.data]:
+                raise ValueError(f'Boundary name clash: "{name}".')
+            return existing
+        else:
+            return super().__new__(cls)
 
     def __init__(self, simulation, name, geo_ids=None, data=None):
         """Create boundary object.
@@ -237,6 +280,17 @@ class Boundary:
 class Material:
     """Wrapper for materials in sif-file."""
 
+    def __new__(cls, simulation, name, data=None):
+        """Intercept object construction to return an existing object if possible."""
+        if name in simulation.materials:
+            existing = simulation.materials[name]
+            new_data = {} if data is None else data
+            if new_data != existing.data:
+                raise ValueError(f'Material name clash: "{name}".')
+            return existing
+        else:
+            return super().__new__(cls)
+
     def __init__(self, simulation, name, data=None):
         """Create material object
 
@@ -265,6 +319,17 @@ class Material:
 class BodyForce:
     """Wrapper for body forces in sif-file."""
 
+    def __new__(cls, simulation, name, data=None):
+        """Intercept object construction to return an existing object if possible."""
+        if name in simulation.body_forces:
+            existing = simulation.body_forces[name]
+            new_data = {} if data is None else data
+            if new_data != existing.data:
+                raise ValueError(f'BodyForce name clash: "{name}".')
+            return existing
+        else:
+            return super().__new__(cls)
+
     def __init__(self, simulation, name, data=None):
         """Create body force object.
 
@@ -290,8 +355,104 @@ class BodyForce:
         return str(self.id)
 
 
+class Component:
+    """Wrapper for components in sif-file."""
+
+    def __new__(
+        cls, simulation, name, master_bodies=None, master_boundaries=None, data=None
+    ):
+        """Intercept object construction to return an existing object if possible."""
+        if name in simulation.components:
+            existing = simulation.components[name]
+            new_master_bodies = [] if master_bodies is None else master_bodies
+            new_master_boundaries = (
+                [] if master_boundaries is None else master_boundaries
+            )
+            new_data = {} if data is None else data
+            if [new_master_bodies, new_master_boundaries, new_data] != [
+                existing.master_bodies,
+                existing.master_boundaries,
+                existing.data,
+            ]:
+                raise ValueError(f'Component name clash: "{name}".')
+            return existing
+        else:
+            return super().__new__(cls)
+
+    def __init__(
+        self, simulation, name, master_bodies=None, master_boundaries=None, data=None
+    ):
+        """Create component object.
+
+        Args:
+            simulation (Simulation Object): The component is added to
+                                            this simulation object.
+            name (str): Name of the component
+            master_bodies (list of Body, optional): Master Body objects.
+            master_bodies (list of Boundary, optional): Master Boundary objects.
+            data (dict, optional): Component data as in sif-file.
+        """
+        simulation.components.update({name: self})
+        self.id = 0
+        self.name = name
+        if master_bodies is None:
+            self.master_bodies = []
+        else:
+            self.master_bodies = master_bodies
+        if master_boundaries is None:
+            self.master_boundaries = []
+        else:
+            self.master_boundaries = master_boundaries
+        if data is None:
+            self.data = {}
+        else:
+            self.data = data
+
+    def get_data(self):
+        """Generate dictionary with data for sif-file."""
+        d = {
+            "Name": self.name,
+        }
+        if self.master_bodies != []:
+            body_names = ""
+            for body in self.master_bodies:
+                body_names += f"{body.name}, "
+            body_names = body_names.strip()
+            d.update(
+                {
+                    f"Master Bodies({len(self.master_bodies)})": f"{' '.join([str(x) for x in self.master_bodies])}  ! {body_names}"
+                }
+            )
+        if self.master_boundaries != []:
+            boundary_names = ""
+            for boundary in self.master_boundaries:
+                boundary_names += f"{boundary.name}, "
+            boundary_names = boundary_names.strip()
+            d.update(
+                {
+                    f"Master Boundaries({len(self.master_boundaries)})": f"{' '.join([str(x) for x in self.master_boundaries])}  ! {boundary_names}"
+                }
+            )
+        d.update(self.data)
+        return d
+
+    def __str__(self):
+        return str(self.id)
+
+
 class InitialCondition:
     """Wrapper for initial condition in sif-file."""
+
+    def __new__(cls, simulation, name, data=None):
+        """Intercept object construction to return an existing object if possible."""
+        if name in simulation.initial_conditions:
+            existing = simulation.initial_conditions[name]
+            new_data = {} if data is None else data
+            if new_data != existing.data:
+                raise ValueError(f'InitialCondition name clash: "{name}".')
+            return existing
+        else:
+            return super().__new__(cls)
 
     def __init__(self, simulation, name, data=None):
         """Create initial condition object.
@@ -322,6 +483,17 @@ class InitialCondition:
 class Solver:
     """Wrapper for solver in sif-file."""
 
+    def __new__(cls, simulation, name, data=None):
+        """Intercept object construction to return an existing object if possible."""
+        if name in simulation.solvers:
+            existing = simulation.solvers[name]
+            new_data = {} if data is None else data
+            if new_data != existing.data:
+                raise ValueError(f'Solver name clash: "{name}".')
+            return existing
+        else:
+            return super().__new__(cls)
+
     def __init__(self, simulation, name, data=None):
         """Create solver object
 
@@ -349,6 +521,17 @@ class Solver:
 
 class Equation:
     """Wrapper for equations in sif-file."""
+
+    def __new__(cls, simulation, name, solvers, data=None):
+        """Intercept object construction to return an existing object if possible."""
+        if name in simulation.equations:
+            existing = simulation.equations[name]
+            new_data = {} if data is None else data
+            if [solvers, new_data] != [existing.solvers, existing.data]:
+                raise ValueError(f'Equation name clash: "{name}".')
+            return existing
+        else:
+            return super().__new__(cls)
 
     def __init__(self, simulation, name, solvers, data=None):
         """Create equation object
@@ -416,7 +599,7 @@ def load_simulation(name, setup_file=""):
         Simulation object.
     """
     if setup_file == "":
-        setup_file = f"{data_dir}/simulations.yml"
+        setup_file = os.path.join(data_dir, "simulations.yml")
     with open(setup_file) as f:
         settings = yaml.safe_load(f)[name]
     sim = Simulation()
@@ -436,7 +619,7 @@ def load_material(name, simulation, setup_file=""):
         Material object.
     """
     if setup_file == "":
-        setup_file = f"{data_dir}/materials.yml"
+        setup_file = os.path.join(data_dir, "materials.yml")
     with open(setup_file) as f:
         data = yaml.safe_load(f)[name]
     return Material(simulation, name, data)
@@ -454,7 +637,7 @@ def load_solver(name, simulation, setup_file=""):
         Solver object.
     """
     if setup_file == "":
-        setup_file = f"{data_dir}/solvers.yml"
+        setup_file = os.path.join(data_dir, "solvers.yml")
     with open(setup_file) as f:
         data = yaml.safe_load(f)[name]
     return Solver(simulation, name, data)
@@ -472,7 +655,7 @@ def load_boundary(name, simulation, setup_file=""):
         Boundary object.
     """
     if setup_file == "":
-        setup_file = f"{data_dir}/boundaries.yml"
+        setup_file = os.path.join(data_dir, "boundaries.yml")
     with open(setup_file) as f:
         data = yaml.safe_load(f)[name]
     return Boundary(simulation, name, data=data)
@@ -490,7 +673,7 @@ def load_initial_condition(name, simulation, setup_file=""):
         InitialCondition object.
     """
     if setup_file == "":
-        setup_file = f"{data_dir}/initial_conditions.yml"
+        setup_file = os.path.join(data_dir, "initial_conditions.yml")
     with open(setup_file) as f:
         data = yaml.safe_load(f)[name]
     return InitialCondition(simulation, name, data)
@@ -508,7 +691,7 @@ def load_body_force(name, simulation, setup_file=""):
         BodyForce object.
     """
     if setup_file == "":
-        setup_file = f"{data_dir}/body_forces.yml"
+        setup_file = os.path.join(data_dir, "body_forces.yml")
     with open(setup_file) as f:
         data = yaml.safe_load(f)[name]
     return BodyForce(simulation, name, data)
