@@ -14,7 +14,7 @@ setuptools.setup(
     description="A python interface to Elmer.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/nemocrys/pyelmer",
+    url="https://github.com/TinArmEngineering/pyelmer",
     packages=["pyelmer", "pyelmer.test"],
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -23,8 +23,7 @@ setuptools.setup(
     ],
     install_requires=[
         "pyyaml",
-        "numpy",
-        "pandas",
+        "numpy"
     ],
     python_requires=">=3.7",
 )

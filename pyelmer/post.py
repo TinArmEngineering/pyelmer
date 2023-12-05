@@ -2,8 +2,7 @@ import os
 import re
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
