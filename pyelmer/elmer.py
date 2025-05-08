@@ -1,7 +1,7 @@
 """Wrapper for Elmer simulation input file (sif-file).
 
 The sif file is represented by a Simulation object, which contains
-dictionaries of objects for each section (i.e. Solvers, Bodies, 
+dictionaries of objects for each section (i.e. Solvers, Bodies,
 Materials, etc.).
 Each of these objects contains the data required in the sif in form
 of a dictionary called data.
@@ -37,6 +37,7 @@ class Simulation:
         self.constants = {"Stefan Boltzmann": 5.6704e-08}
         self.settings = {}
         self.sif_filename = "case.sif"
+        self.includes = {}
 
     def write_sif(self, simulation_dir):
         """Write sif file.
@@ -52,6 +53,9 @@ class Simulation:
             f.write("Header\n")
             f.write(self._dict_to_str(self.header, key_value_separator=" "))
             f.write("End\n\n")
+            f.write("! Includes\n")
+            for include_name, include in self.includes.items():
+                f.write(f'include  "{include}"! {include_name}\n ')
             f.write("Simulation\n")
             f.write(self._dict_to_str(self.settings))
             f.write("End\n\n")
