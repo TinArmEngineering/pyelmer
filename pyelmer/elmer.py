@@ -55,7 +55,7 @@ class Simulation:
             f.write("End\n\n")
             f.write("! Includes\n")
             for include_name, include in self.includes.items():
-                f.write(f'include  "{include}"! {include_name}\n ')
+                f.write(f"include  {include} ! {include_name}\n ")
             f.write("Simulation\n")
             f.write(self._dict_to_str(self.settings))
             f.write("End\n\n")
