@@ -205,13 +205,16 @@ class Body:
         )
         self.material = None  # : optional reference to a Material object
         self.body_force = None  # : optional reference to a BodyForce object
+        self.r_outer = None  # : optional radius to trigger torque calculation
+        self.r_inner = None  # : optional radius to trigger torque calculation
 
     def get_data(self):
         """Generate dictionary with data for sif-file."""
         d = {
+            "Name": self.name,
             f"Target Bodies({len(self.body_ids)})": " ".join(
                 [str(x) for x in self.body_ids]
-            )
+            ),
         }
         if self.equation is not None:
             d.update({"Equation": f"{self.equation.id}  ! {self.equation.name}"})
@@ -225,6 +228,10 @@ class Body:
             d.update({"Material": f"{self.material.id}  ! {self.material.name}"})
         if self.body_force is not None:
             d.update({"Body Force": f"{self.body_force.id}  ! {self.body_force.name}"})
+        if self.r_outer is not None:
+            d.update({"r outer": self.r_outer})
+        if self.r_inner is not None:
+            d.update({"r inner": self.r_inner})
         d.update(self.data)
         return d
 
