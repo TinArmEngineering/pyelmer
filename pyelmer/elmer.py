@@ -207,6 +207,7 @@ class Body:
         self.body_force = None  # : optional reference to a BodyForce object
         self.r_outer = None  # : optional radius to trigger torque calculation
         self.r_inner = None  # : optional radius to trigger torque calculation
+        self.torque_groups = [None]  # : optional list of torque groups
 
     def get_data(self):
         """Generate dictionary with data for sif-file."""
@@ -232,6 +233,21 @@ class Body:
             d.update({"r outer": self.r_outer})
         if self.r_inner is not None:
             d.update({"r inner": self.r_inner})
+        # accept torque_groups as list of integers or as single integer
+        try:
+            iter(self.torque_groups)
+            if isinstance(self.torque_groups, str):
+                self.torque_groups = [int(self.torque_groups)]
+        except TypeError:
+            self.torque_groups = [self.torque_groups]
+
+        if self.torque_groups and all(x is not None for x in self.torque_groups):
+            d.update(
+                {
+                    "Torque Groups": "Integer "
+                    + " ".join([str(x) for x in self.torque_groups])
+                }
+            )
         d.update(self.data)
         return d
 
